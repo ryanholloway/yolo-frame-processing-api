@@ -148,25 +148,22 @@ colors = [
     (255, 255, 0)   # Cyan
 ]
 
-
 def create_fake_image():
     global color_index, colors
     height, width = 480, 640
-    
+    gradiantLevel = np.random.rand()
     vertical_gradient = np.tile(np.linspace(0, 255, height, dtype=np.uint8), (width, 1)).T
     horizontal_gradient = np.tile(np.linspace(0, 255, width, dtype=np.uint8), (height, 1))
     
-    combined_gradient = cv2.addWeighted(vertical_gradient, 0.5, horizontal_gradient, 0.5, 0)
+    combined_gradient = cv2.addWeighted(vertical_gradient, gradiantLevel, horizontal_gradient, gradiantLevel, 0)
     fake_image = cv2.merge([combined_gradient, vertical_gradient, horizontal_gradient])
     
-    color = colors[color_index % len(colors)]
+    color = colors[1]
     
-    text_x = 50 + (color_index * 30) % (width - 200)
-    text_y = 240 + (color_index * 20) % (height - 100)
-    
+    text_x = 50
+    text_y = 240
+
     cv2.putText(fake_image, 'Fake Frame', (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 2, color, 3, cv2.LINE_AA)
-    
-    color_index += 1
     return fake_image
 
 def fake_detection_loop(data_lock, stop_flag):
