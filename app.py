@@ -4,6 +4,8 @@ import threading
 import time
 import cv2
 import numpy as np
+import warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 app = Flask(__name__)
 
