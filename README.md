@@ -18,10 +18,12 @@ This repository contains a Flask-based web API for real-time object detection us
 ## Installation
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/ryanholloway/yolo-frame-processing-api
 cd yolo-frame-processing-api
 ```
+
 2. Create a Python virtual environment and activate it:
 
 ```bash
@@ -34,6 +36,7 @@ source venv/bin/activate
 ```
 pip install -r requirements.txt
 ```
+
 ## Configuration
 
 - By default, `FAKE_MODE` is set to `True` in `app.py` for development without a real camera.
@@ -44,8 +47,8 @@ pip install -r requirements.txt
 
 Run the Flask app:
 
-``` 
-python app.py
+```
+sudo -E venv/bin/python app.py
 ```
 
 The server will start on `http://0.0.0.0:7926`.
@@ -63,12 +66,14 @@ The server will start on `http://0.0.0.0:7926`.
 
 - `POST /model`  
   Switches the YOLO model used for detection.  
-  Request JSON example:  
+  Request JSON example:
+
 ```json
 {
-"model_name": "yollo11n"
+  "model_name": "yollo11n"
 }
 ```
+
 Returns success status or error if model not found.
 
 ## Overview
