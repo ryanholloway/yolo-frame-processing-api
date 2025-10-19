@@ -108,6 +108,11 @@ def get_detections():
             })
         return jsonify(detections)
 
+@app.route('/unprocessed_frame')
+def get_unprocessed_frame():
+    frame = picam2.capture_array()
+    ret, jpeg = cv2.imencode('.jpg', frame)
+    return Response(jpeg.tobytes(), mimetype='image/jpeg')
     
 
 @app.route('/model', methods=['GET', 'POST'])
