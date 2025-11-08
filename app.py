@@ -12,9 +12,17 @@ from coco_class import CocoClass, coco_classes as COCO_NAMES
 app = Flask(__name__)
 
 YOLO_MODEL_PATHS ={
-    "yollo11n":"yolo11n.pt",
-    "yollo11s":"yolo11s.pt",
+    "yolo11n":"best.pt"
 }
+
+CUSTOM_CLASS_NAMES = [
+    '10C', '10D', '10H', '10S', '2C', '2D', '2H', '2S', '3C', '3D', '3H', '3S', 
+    '4C', '4D', '4H', '4S', '5C', '5D', '5H', '5S', '6C', '6D', '6H', '6S', 
+    '7C', '7D', '7H', '7S', '8C', '8D', '8H', '8S', '9C', '9D', '9H', '9S', 
+    'AC', 'AD', 'AH', 'AS', 'JC', 'JD', 'JH', 'JS', 'KC', 'KD', 'KH', 'KS', 
+    'QC', 'QD', 'QH', 'QS'
+]
+
 
 FAKE_MODE = False
 
@@ -25,7 +33,7 @@ if not FAKE_MODE:
 
 def initialize_camera():
     camera = Picamera2()
-    config = camera.create_preview_configuration(main={"format": "RGB888", "size": (640, 360)})
+    config = camera.create_preview_configuration(main={"format": "RGB888", "size": (640, 640)})
     camera.configure(config)
     camera.start()
     time.sleep(2)
@@ -33,8 +41,12 @@ def initialize_camera():
 
 if not FAKE_MODE:
     picam2 = initialize_camera()
-    model_name = "yollo11n"
-    model = YOLO(YOLO_MODEL_PATHS[model_name])
+    model_name = "yolo11n"
+    try:
+        model = YOLO(YOLO_MODEL_PATHS[model_name])
+        print(f"Model loaded successfully from {YOLO_MODEL_PATHS[model_name]}")
+    except Exception as e:
+        print(f"Error loading model: {e}")
 
 latest_frame = None
 latest_detections = []
@@ -79,7 +91,7 @@ def get_frame():
         return Response(jpeg.tobytes(), mimetype='image/jpeg')
     else:
         frame = picam2.capture_array()
-        results = model(frame)
+        results = model(frame, conf=0.3)
         annotated_frame = results[0].plot()
         ret, jpeg = cv2.imencode('.jpg', annotated_frame)
         if not ret:
@@ -97,13 +109,15 @@ def get_detections():
         return jsonify(dummy_detections)
     else:
         frame = picam2.capture_array()
-        results = model(frame)
+        results = model(frame, conf=0.3)
         detections = []
         for det in results[0].boxes.data.tolist():
             x1, y1, x2, y2, score, class_id = det
             class_id = int(class_id)
+            class_name = CUSTOM_CLASS_NAMES[class_id] if class_id < len(CUSTOM_CLASS_NAMES) else f"class_{class_id}"
+            class_name = class_name.replace("10", "T")
             detections.append({
-                "class_name": COCO_NAMES[class_id] if class_id < len(COCO_NAMES) else f"class_{class_id}",
+                "class_name": class_name,
                 "confidence": float(score)
             })
         return jsonify(detections)
