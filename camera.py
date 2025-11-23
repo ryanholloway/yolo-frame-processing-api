@@ -1,9 +1,9 @@
 from config import CAMERA_CONFIG, create_fake_image
 
 class Camera:
-    def __init__(self, fake=False):
-        self.fake = fake
-        if not fake:
+    def __init__(self, simulation_mode=False):
+        self.simulation_mode = simulation_mode
+        if not simulation_mode:
             try:
                 from picamera2 import Picamera2
                 import time
@@ -12,14 +12,14 @@ class Camera:
                 self.camera.configure(config)
                 self.camera.start()
                 time.sleep(2)
-            except ImportError:
-                print("picamera2 not available, falling back to fake mode")
-                self.fake = True
-        if self.fake:
+            except (ImportError, RuntimeError) as e:
+                print(f"Camera initialization failed: {e}. Falling back to simulation mode")
+                self.simulation_mode = True
+        if self.simulation_mode:
             pass
 
     def capture(self):
-        if self.fake:
+        if self.simulation_mode:
             return create_fake_image()
         else:
             return self.camera.capture_array()

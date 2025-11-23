@@ -42,3 +42,19 @@ def create_fake_image():
 
     cv2.putText(fake_image, 'Fake Frame', (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 2, color, 3, cv2.LINE_AA)
     return fake_image
+
+def create_message_frame(message="Capture not started. Use POST /start_capture to begin."):
+    import cv2
+    import numpy as np
+    height, width = IMAGE_HEIGHT, IMAGE_WIDTH
+    message_frame = np.zeros((height, width, 3), dtype=np.uint8)
+    message_frame[:] = (50, 50, 50)
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 1
+    color = (255, 255, 255)
+    thickness = 2
+    text_size = cv2.getTextSize(message, font, font_scale, thickness)[0]
+    text_x = (width - text_size[0]) // 2
+    text_y = (height + text_size[1]) // 2
+    cv2.putText(message_frame, message, (text_x, text_y), font, font_scale, color, thickness)
+    return message_frame

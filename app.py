@@ -6,16 +6,16 @@ import numpy as np
 import warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 from ultralytics import YOLO
-from config import YOLO_MODEL_PATHS, CUSTOM_CLASS_NAMES, colors, create_fake_image
+from config import YOLO_MODEL_PATHS, CUSTOM_CLASS_NAMES, colors, create_fake_image, create_message_frame, IMAGE_WIDTH, IMAGE_HEIGHT
 from camera import Camera
 
 app = Flask(__name__)
 
-FAKE_MODE = False
+SIMULATION_MODE = False
 
-camera = Camera(fake=FAKE_MODE)
+camera = Camera(simulation_mode=SIMULATION_MODE)
 
-if not FAKE_MODE:
+if not SIMULATION_MODE:
     model_name = "yolo11n"
     try:
         model = YOLO(YOLO_MODEL_PATHS[model_name])
@@ -26,12 +26,25 @@ if not FAKE_MODE:
 latest_frame = None
 latest_detections = []
 data_lock = threading.Lock()
+is_capturing = False
+capture_thread_instance = None
+
+def start_capture():
+    global is_capturing, capture_thread_instance
+    if not is_capturing:
+        is_capturing = True
+        capture_thread_instance = threading.Thread(target=capture_thread, daemon=True)
+        capture_thread_instance.start()
+
+def stop_capture():
+    global is_capturing
+    is_capturing = False
 
 def capture_thread():
     global latest_frame, latest_detections
-    while True:
+    while is_capturing:
         frame = camera.capture()
-        if FAKE_MODE:
+        if SIMULATION_MODE:
             import random
             num_detections = random.randint(1, 5)
             fake_detections = []
@@ -60,16 +73,23 @@ def capture_thread():
             latest_detections = detections
         time.sleep(0.1)
 
-# Start the background thread after initialization
-threading.Thread(target=capture_thread, daemon=True).start()
+
+@app.route('/')
+def index():
+    with open('api.html', 'r') as f:
+        return f.read(), 200, {'Content-Type': 'text/html'}
 
 @app.route('/frame')
 def get_frame():
     with data_lock:
         if latest_frame is None:
-            return Response(status=503)
+            message_frame = create_message_frame()
+            ret, jpeg = cv2.imencode('.jpg', message_frame)
+            if not ret:
+                return Response(status=500)
+            return Response(jpeg.tobytes(), mimetype='image/jpeg')
         frame = latest_frame.copy()
-        if FAKE_MODE:
+        if SIMULATION_MODE:
             annotated_frame = frame
         else:
             results = model(frame, conf=0.3)
@@ -84,13 +104,19 @@ def get_frame():
 @app.route('/detections')
 def get_detections():
     with data_lock:
+        if not latest_detections:
+            return jsonify([{"message": "Capture not started. Use POST /start_capture to begin."}])
         return jsonify(latest_detections)
     
 @app.route('/unprocessed_frame')
 def get_unprocessed_frame():
     with data_lock:
         if latest_frame is None:
-            return Response(status=503)
+            message_frame = create_message_frame()
+            ret, jpeg = cv2.imencode('.jpg', message_frame)
+            if not ret:
+                return Response(status=500)
+            return Response(jpeg.tobytes(), mimetype='image/jpeg')
         frame = latest_frame.copy()
         ret, jpeg = cv2.imencode('.jpg', frame)
         if not ret:
@@ -115,6 +141,16 @@ def change_model():
         except Exception as e:
             return jsonify({"error": str(e)}), 500
     return jsonify({"current_model": model_name, "available_models": list(YOLO_MODEL_PATHS.keys())})
+
+@app.route('/start_capture', methods=['POST'])
+def start_capture_endpoint():
+    start_capture()
+    return jsonify({"status": "Capture started"})
+
+@app.route('/stop_capture', methods=['POST'])
+def stop_capture_endpoint():
+    stop_capture()
+    return jsonify({"status": "Capture stopped"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=7926, debug=True, use_reloader=False)

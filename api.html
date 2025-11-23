@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YOLO Object Detection API</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #333;
+        line-height: 1.6;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        color: #2c3e50;
+        text-align: center;
+        margin-bottom: 10px;
+        font-size: 2.5em;
+      }
+      .subtitle {
+        text-align: center;
+        color: #7f8c8d;
+        margin-bottom: 30px;
+        font-size: 1.1em;
+      }
+      h2 {
+        color: #34495e;
+        border-bottom: 3px solid #3498db;
+        padding-bottom: 10px;
+        margin-top: 40px;
+      }
+      h3 {
+        color: #2c3e50;
+        background: #ecf0f1;
+        padding: 10px 15px;
+        border-left: 4px solid #3498db;
+        margin-top: 25px;
+      }
+      code {
+        background-color: #f8f9fa;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: "Courier New", monospace;
+        color: #e74c3c;
+      }
+      pre {
+        background-color: #2c3e50;
+        color: #ecf0f1;
+        padding: 15px;
+        border-radius: 6px;
+        overflow-x: auto;
+        font-family: "Courier New", monospace;
+        font-size: 0.9em;
+      }
+      .endpoint {
+        margin-bottom: 25px;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 6px;
+        border-left: 4px solid #27ae60;
+      }
+      .endpoint h3 {
+        margin-top: 0;
+        background: none;
+        padding: 0;
+        border-left: none;
+        color: #27ae60;
+      }
+      .response {
+        font-weight: bold;
+        color: #e67e22;
+      }
+      .config-note {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        padding: 15px;
+        border-radius: 6px;
+        margin: 20px 0;
+      }
+      .config-note h3 {
+        color: #856404;
+        margin-top: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>YOLO Object Detection Flask API</h1>
+      <p class="subtitle">
+        Real-time object detection API with YOLO models. Supports live camera
+        and simulation mode for testing.
+      </p>
+
+      <h2>Endpoints</h2>
+
+      <div class="endpoint">
+        <h3>GET /frame</h3>
+        <p>
+          Returns the latest annotated frame as a JPEG image with detection
+          bounding boxes. If capture hasn't started, returns a message image.
+        </p>
+        <p class="response">Response: JPEG image</p>
+      </div>
+
+      <div class="endpoint">
+        <h3>GET /detections</h3>
+        <p>
+          Returns JSON array of the latest detected objects with class names and
+          confidence scores. If capture hasn't started, returns a message.
+        </p>
+        <p class="response">
+          Response: JSON array, e.g., [{"class_name": "AC", "confidence": 0.95}]
+        </p>
+      </div>
+
+      <div class="endpoint">
+        <h3>GET /unprocessed_frame</h3>
+        <p>
+          Returns the latest unprocessed frame as a JPEG image without
+          annotations. If capture hasn't started, returns a message image.
+        </p>
+        <p class="response">Response: JPEG image</p>
+      </div>
+
+      <div class="endpoint">
+        <h3>GET /model</h3>
+        <p>Returns the current YOLO model name and available models.</p>
+        <p class="response">
+          Response: JSON, e.g., {"current_model": "yolo11n", "available_models":
+          ["yolo11n"]}
+        </p>
+      </div>
+
+      <div class="endpoint">
+        <h3>POST /model</h3>
+        <p>Switches the YOLO model used for detection.</p>
+        <p>
+          <strong>Request Body:</strong> JSON, e.g., {"model_name": "yolo11n"}
+        </p>
+        <p class="response">Response: JSON success message or error</p>
+      </div>
+
+      <div class="endpoint">
+        <h3>POST /start_capture</h3>
+        <p>Starts the frame capture and detection process.</p>
+        <p class="response">Response: JSON status message</p>
+      </div>
+
+      <div class="endpoint">
+        <h3>POST /stop_capture</h3>
+        <p>Stops the frame capture and detection process.</p>
+        <p class="response">Response: JSON status message</p>
+      </div>
+
+      <div class="config-note">
+        <h3>Configuration</h3>
+        <p>
+          The API runs in simulation mode by default for testing. Set
+          <code>SIMULATION_MODE = False</code> in <code>app.py</code> for live
+          camera mode on Raspberry Pi. Capture and detection do not start
+          automatically; use <code>/start_capture</code> to begin.
+        </p>
+        <p>Models and configurations are defined in <code>config.py</code>.</p>
+      </div>
+
+      <h2>Usage Examples</h2>
+      <pre>
+# Get detections
+curl http://localhost:7926/detections
+
+# Get annotated frame
+curl -o frame.jpg http://localhost:7926/frame
+
+# Switch model
+curl -X POST http://localhost:7926/model \
+  -H "Content-Type: application/json" \
+  -d '{"model_name": "yolo11n"}'
+
+# Start capture
+curl -X POST http://localhost:7926/start_capture
+
+# Stop capture
+curl -X POST http://localhost:7926/stop_capture
+        </pre
+      >
+      >
+    </div>
+  </body>
+</html>
