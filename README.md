@@ -7,12 +7,16 @@ This repository contains a Flask-based web API for real-time object detection us
 - Real-time frame capture and object detection with YOLO models.
 - Endpoint to get the latest annotated frame as JPEG.
 - Endpoint to get the latest detection results as JSON.
+- Endpoint to get the latest unprocessed frame as JPEG.
 - Ability to switch between supported YOLO models dynamically.
 - Fake mode to simulate camera capture and detections without hardware for development/testing.
+- Background caching of frames and detections for efficient API responses.
 
 ## Contents
 
 - `app.py`: Main Flask application implementing the API, detection loops, and fake image generation.
+- `config.py`: Configuration file containing model paths, class names, colors, and utility functions.
+- `camera.py`: Camera abstraction for device-agnostic frame capture (supports Raspberry Pi and fallback to fake mode).
 - `requirements.txt`: Python dependencies for the project.
 
 ## Installation
@@ -39,9 +43,11 @@ pip install -r requirements.txt
 
 ## Configuration
 
-- By default, `FAKE_MODE` is set to `True` in `app.py` for development without a real camera.
-- To use a Raspberry Pi camera, set `FAKE_MODE` to `False` and ensure the `picamera2` and `ultralytics` packages are installed and functional.
-- The YOLO model paths are defined in the `YOLO_MODEL_PATHS` dictionary. Add or modify models as needed.
+- By default, `FAKE_MODE` is set to `False` in `app.py` for live camera mode.
+- To use fake mode for development without a real camera, set `FAKE_MODE` to `True`.
+- If `picamera2` is not available (e.g., on non-Raspberry Pi devices), the camera will automatically fall back to fake mode.
+- The YOLO model paths are defined in the `YOLO_MODEL_PATHS` dictionary in `config.py`. Add or modify models as needed.
+- Custom class names for detections are defined in `CUSTOM_CLASS_NAMES` in `config.py`.
 
 ## Usage
 
@@ -56,10 +62,13 @@ The server will start on `http://0.0.0.0:7926`.
 ### API Endpoints
 
 - `GET /frame`  
-  Returns the latest annotated frame as a JPEG image. Returns 503 if no frame is available.
+  Returns the latest annotated frame as a JPEG image with detection bounding boxes. Returns 503 if no frame is available.
 
 - `GET /detections`  
   Returns JSON array of the latest detected objects with class names and confidence scores.
+
+- `GET /unprocessed_frame`  
+  Returns the latest unprocessed frame as a JPEG image without annotations.
 
 - `GET /model`  
   Returns the current YOLO model name and available models.
@@ -70,7 +79,7 @@ The server will start on `http://0.0.0.0:7926`.
 
 ```json
 {
-  "model_name": "yollo11n"
+  "model_name": "yolo11n"
 }
 ```
 
@@ -78,12 +87,12 @@ Returns success status or error if model not found.
 
 ## Overview
 
-The app uses threading to continuously capture frames and run object detection asynchronously:
+The app uses a background thread to continuously capture frames and run object detection asynchronously, caching the latest frame and detections for immediate API responses:
 
 - In fake mode, a synthetic gradient image with "Fake Frame" text is generated with dummy detections.
 - In live mode, frames are captured from the Raspberry Pi camera and processed with YOLO.
 
-The latest frame and detections are kept thread-safe with a lock and served via the Flask endpoints.
+The latest frame and detections are kept thread-safe with a lock and served via the Flask endpoints. This allows `/detections` and `/frame` to be called separately without redundant processing.
 
 ## Dependencies
 
