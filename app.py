@@ -4,6 +4,7 @@ import time
 import cv2
 import numpy as np
 import warnings
+from io import BytesIO
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 from ultralytics import YOLO
 from config import YOLO_MODEL_PATHS, CUSTOM_CLASS_NAMES, colors, create_fake_image, create_message_frame, IMAGE_WIDTH, IMAGE_HEIGHT
@@ -151,6 +152,74 @@ def start_capture_endpoint():
 def stop_capture_endpoint():
     stop_capture()
     return jsonify({"status": "Capture stopped"})
+
+@app.route('/health')
+def health():
+    model_loaded = False
+    if not SIMULATION_MODE:
+        try:
+            model_loaded = model is not None
+        except NameError:
+            model_loaded = False
+    
+    return jsonify({
+        "status": "healthy",
+        "simulation_mode": SIMULATION_MODE,
+        "model_loaded": model_loaded,
+        "model_name": model_name if not SIMULATION_MODE else None
+    })
+
+@app.route('/detect', methods=['POST'])
+def detect():
+    """
+    Endpoint to detect objects in an uploaded image.
+    Returns detections as JSON.
+    
+    Expected request: multipart/form-data with 'image' file
+    Returns: JSON with detections list
+    """
+    if 'image' not in request.files:
+        return jsonify({"error": "No image part in request"}), 400
+    
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+    
+    try:
+        file_bytes = np.frombuffer(file.read(), np.uint8)
+        frame = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
+        
+        if frame is None:
+            return jsonify({"error": "Could not decode image"}), 400
+        
+        if SIMULATION_MODE:
+            import random
+            num_detections = random.randint(1, 5)
+            detections = []
+            for _ in range(num_detections):
+                class_name = random.choice(CUSTOM_CLASS_NAMES)
+                confidence = round(random.uniform(0.5, 1.0), 2)
+                detections.append({
+                    "class_name": class_name,
+                    "confidence": confidence
+                })
+        else:
+            results = model(frame, conf=0.3)
+            detections = []
+            for det in results[0].boxes.data.tolist():
+                score = det[4]
+                class_id = int(det[5])
+                class_name = CUSTOM_CLASS_NAMES[class_id] if class_id < len(CUSTOM_CLASS_NAMES) else f"class_{class_id}"
+                class_name = class_name.replace("10", "T")
+                detections.append({
+                    "class_name": class_name,
+                    "confidence": float(score)
+                })
+        
+        return jsonify(detections)
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=7926, debug=True, use_reloader=False)
