@@ -59,6 +59,12 @@ sudo -E venv/bin/python app.py
 
 The server will start on `http://0.0.0.0:7926`.
 
+To restart the systemd service:
+
+```bash
+sudo systemctl restart yolo-api.service
+```
+
 ### API Endpoints
 
 - `GET /`  

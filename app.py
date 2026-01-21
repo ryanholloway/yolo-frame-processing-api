@@ -9,8 +9,12 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 from ultralytics import YOLO
 from config import YOLO_MODEL_PATHS, CUSTOM_CLASS_NAMES, colors, create_fake_image, create_message_frame, IMAGE_WIDTH, IMAGE_HEIGHT
 from camera import Camera
+from logger import Logger, LogLevel
 
 app = Flask(__name__)
+
+# Initialize global logger
+logger = Logger()
 
 SIMULATION_MODE = False
 
@@ -77,6 +81,11 @@ def capture_thread():
 
 @app.route('/')
 def index():
+    with open('logs.html', 'r') as f:
+        return f.read(), 200, {'Content-Type': 'text/html'}
+
+@app.route('/info')
+def info():
     with open('api.html', 'r') as f:
         return f.read(), 200, {'Content-Type': 'text/html'}
 
@@ -146,11 +155,13 @@ def change_model():
 @app.route('/start_capture', methods=['POST'])
 def start_capture_endpoint():
     start_capture()
+    logger.log(LogLevel.INFO, "Capture started via API", "start_capture_endpoint")
     return jsonify({"status": "Capture started"})
 
 @app.route('/stop_capture', methods=['POST'])
 def stop_capture_endpoint():
     stop_capture()
+    logger.log(LogLevel.INFO, "Capture stopped via API", "stop_capture_endpoint")
     return jsonify({"status": "Capture stopped"})
 
 @app.route('/health')
@@ -220,6 +231,68 @@ def detect():
     
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+# ====== LOG ENDPOINTS ======
+
+@app.route('/logs', methods=['POST'])
+def post_log():
+    """Post a new log message"""
+    try:
+        data = request.json
+        level_str = data.get("level", "INFO").upper()
+        message = data.get("message", "")
+        context = data.get("context", "")
+        
+        if not message:
+            return jsonify({"error": "Message is required"}), 400
+        
+        try:
+            log_level = LogLevel[level_str]
+        except KeyError:
+            return jsonify({"error": f"Invalid log level: {level_str}. Must be one of: ERROR, WARNING, INFO, DETECTION, DECISION"}), 400
+        
+        logger.log(log_level, message, context)
+        return jsonify({"status": "Log recorded", "level": level_str, "message": message})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/logs', methods=['GET'])
+def get_logs():
+    """Get all logs in JSON format organized by log level"""
+    all_logs = logger.get_all_logs()
+    return jsonify({
+        "logs": all_logs
+    })
+
+
+@app.route('/logs/<level>', methods=['GET'])
+def get_logs_by_level(level):
+    """Get logs for a specific level"""
+    try:
+        from logger import LogLevel as LL
+        log_level = LL[level.upper()]
+        logs = logger.get_logs_by_level(log_level)
+        return jsonify({
+            "level": level.upper(),
+            "logs": logs,
+            "count": len(logs)
+        })
+    except KeyError:
+        return jsonify({"error": f"Unknown log level: {level}"}), 400
+
+
+@app.route('/logs/clear', methods=['POST'])
+def clear_logs():
+    """Clear all in-memory logs"""
+    logger.log_buffer = {
+        LogLevel.ERROR: [],
+        LogLevel.WARNING: [],
+        LogLevel.INFO: [],
+        LogLevel.DETECTION: [],
+        LogLevel.DECISION: []
+    }
+    return jsonify({"status": "Logs cleared"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=7926, debug=True, use_reloader=False)

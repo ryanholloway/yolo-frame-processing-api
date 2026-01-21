@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YOLO API - Live Logs</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        color: #e0e0e0;
+        line-height: 1.6;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      .container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        padding: 20px;
+        gap: 15px;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(0, 0, 0, 0.3);
+        padding: 20px;
+        border-radius: 8px;
+        border-left: 4px solid #00d4ff;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      }
+
+      .header h1 {
+        font-size: 2em;
+        color: #00d4ff;
+      }
+
+      .header-info {
+        display: flex;
+        gap: 20px;
+        align-items: center;
+        font-size: 0.9em;
+      }
+
+      .status-badge {
+        padding: 8px 12px;
+        background: rgba(76, 175, 80, 0.3);
+        border: 1px solid #4caf50;
+        border-radius: 20px;
+        color: #4caf50;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .status-badge::before {
+        content: "";
+        width: 8px;
+        height: 8px;
+        background: #4caf50;
+        border-radius: 50%;
+        animation: pulse 1s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+
+      .controls {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      button {
+        padding: 8px 16px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 0.9em;
+        transition: all 0.3s ease;
+      }
+
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      }
+
+      button:active {
+        transform: translateY(0);
+      }
+
+      .log-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 15px;
+        flex: 1;
+        overflow-y: auto;
+        padding: 5px;
+      }
+
+      .log-panel {
+        background: rgba(0, 0, 0, 0.4);
+        border-radius: 8px;
+        border-left: 4px solid;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      }
+
+      .log-panel.error {
+        border-left-color: #f44336;
+      }
+
+      .log-panel.warning {
+        border-left-color: #ff9800;
+      }
+
+      .log-panel.info {
+        border-left-color: #2196f3;
+      }
+
+      .log-panel.detection {
+        border-left-color: #4caf50;
+      }
+
+      .log-panel.decision {
+        border-left-color: #9c27b0;
+      }
+
+      .log-header {
+        padding: 12px 15px;
+        font-weight: bold;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.95em;
+      }
+
+      .log-panel.error .log-header {
+        color: #f44336;
+      }
+
+      .log-panel.warning .log-header {
+        color: #ff9800;
+      }
+
+      .log-panel.info .log-header {
+        color: #2196f3;
+      }
+
+      .log-panel.detection .log-header {
+        color: #4caf50;
+      }
+
+      .log-panel.decision .log-header {
+        color: #9c27b0;
+      }
+
+      .log-count {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.85em;
+      }
+
+      .log-content {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px 15px;
+        font-family: "Courier New", monospace;
+        font-size: 0.85em;
+      }
+
+      .log-entry {
+        margin-bottom: 10px;
+        padding: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 4px;
+        border-left: 2px solid rgba(255, 255, 255, 0.2);
+        transition: all 0.2s ease;
+      }
+
+      .log-entry:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateX(4px);
+      }
+
+      .log-timestamp {
+        color: #b0bec5;
+        font-size: 0.8em;
+      }
+
+      .log-message {
+        color: #e0e0e0;
+        margin-top: 4px;
+        word-break: break-word;
+      }
+
+      .log-context {
+        color: #90caf9;
+        font-size: 0.8em;
+        margin-top: 4px;
+      }
+
+      .empty-message {
+        color: #757575;
+        text-align: center;
+        padding: 20px;
+        font-style: italic;
+      }
+
+      .info-bar {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 12px 20px;
+        border-radius: 8px;
+        font-size: 0.85em;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .session-info {
+        color: #b0bec5;
+      }
+
+      .last-update {
+        color: #90caf9;
+      }
+
+      /* Scrollbar styling */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div>
+          <h1>YOLO Camera API - Live Logs</h1>
+        </div>
+        <div class="header-info">
+          <div class="status-badge">Live Streaming</div>
+          <div class="controls">
+            <button onclick="clearAllLogs()">Clear All</button>
+            <button onclick="toggleAutoScroll()" id="autoScrollBtn">
+              Auto-Scroll: ON
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="log-container" id="logContainer">
+        <div class="log-panel error">
+          <div class="log-header">
+            ERRORS
+            <span class="log-count" id="errorCount">0</span>
+          </div>
+          <div class="log-content" id="errorLogs"></div>
+        </div>
+
+        <div class="log-panel warning">
+          <div class="log-header">
+            WARNINGS
+            <span class="log-count" id="warningCount">0</span>
+          </div>
+          <div class="log-content" id="warningLogs"></div>
+        </div>
+
+        <div class="log-panel info">
+          <div class="log-header">
+            INFO
+            <span class="log-count" id="infoCount">0</span>
+          </div>
+          <div class="log-content" id="infoLogs"></div>
+        </div>
+
+        <div class="log-panel detection">
+          <div class="log-header">
+            DETECTIONS
+            <span class="log-count" id="detectionCount">0</span>
+          </div>
+          <div class="log-content" id="detectionLogs"></div>
+        </div>
+
+        <div class="log-panel decision">
+          <div class="log-header">
+            DECISIONS
+            <span class="log-count" id="decisionCount">0</span>
+          </div>
+          <div class="log-content" id="decisionLogs"></div>
+        </div>
+      </div>
+
+      <div class="info-bar">
+        <span class="session-info"
+          >Session: <span id="sessionInfo">-</span></span
+        >
+        <span class="last-update"
+          >Last update: <span id="lastUpdate">-</span></span
+        >
+      </div>
+    </div>
+
+    <script>
+      let autoScroll = true;
+      let previousLogCounts = {
+        ERROR: 0,
+        WARNING: 0,
+        INFO: 0,
+        DETECTION: 0,
+        DECISION: 0,
+      };
+
+      const logLevelMap = {
+        ERROR: { id: "errorLogs", countId: "errorCount" },
+        WARNING: { id: "warningLogs", countId: "warningCount" },
+        INFO: { id: "infoLogs", countId: "infoCount" },
+        DETECTION: { id: "detectionLogs", countId: "detectionCount" },
+        DECISION: { id: "decisionLogs", countId: "decisionCount" },
+      };
+
+      async function fetchLogs() {
+        try {
+          const response = await fetch("/logs");
+          if (!response.ok) throw new Error("Failed to fetch logs");
+
+          const data = await response.json();
+          updateLogs(data.logs);
+          document.getElementById("sessionInfo").textContent =
+            data.session_folder || "-";
+          document.getElementById("lastUpdate").textContent =
+            new Date().toLocaleTimeString();
+        } catch (error) {
+          console.error("Error fetching logs:", error);
+        }
+      }
+
+      function updateLogs(logs) {
+        Object.entries(logLevelMap).forEach(([level, elements]) => {
+          const logList = logs[level] || [];
+          const container = document.getElementById(elements.id);
+          const countElement = document.getElementById(elements.countId);
+
+          // Update count
+          countElement.textContent = logList.length;
+
+          // Only update if there are new logs
+          if (logList.length !== previousLogCounts[level]) {
+            previousLogCounts[level] = logList.length;
+            renderLogs(container, logList);
+
+            if (autoScroll && container.parentElement) {
+              container.parentElement.scrollTop =
+                container.parentElement.scrollHeight;
+            }
+          }
+        });
+      }
+
+      function renderLogs(container, logs) {
+        if (logs.length === 0) {
+          container.innerHTML =
+            '<div class="empty-message">No logs yet...</div>';
+          return;
+        }
+
+        container.innerHTML = logs
+          .map(
+            (log) => `
+                <div class="log-entry">
+                    <div class="log-timestamp">${log.timestamp}</div>
+                    <div class="log-message">${escapeHtml(log.message)}</div>
+                    ${log.context ? `<div class="log-context">Context: ${escapeHtml(log.context)}</div>` : ""}
+                </div>
+            `,
+          )
+          .join("");
+      }
+
+      function escapeHtml(text) {
+        const map = {
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&#039;",
+        };
+        return text.replace(/[&<>"']/g, (m) => map[m]);
+      }
+
+      function clearAllLogs() {
+        if (confirm("Are you sure you want to clear all logs from memory?")) {
+          fetch("/logs/clear", { method: "POST" })
+            .then(() => {
+              previousLogCounts = {
+                ERROR: 0,
+                WARNING: 0,
+                INFO: 0,
+                DETECTION: 0,
+                DECISION: 0,
+              };
+              fetchLogs();
+            })
+            .catch((error) => console.error("Error clearing logs:", error));
+        }
+      }
+
+      function toggleAutoScroll() {
+        autoScroll = !autoScroll;
+        document.getElementById("autoScrollBtn").textContent =
+          `Auto-Scroll: ${autoScroll ? "ON" : "OFF"}`;
+      }
+
+      // Fetch logs every 500ms
+      setInterval(fetchLogs, 500);
+
+      // Initial fetch
+      fetchLogs();
+    </script>
+  </body>
+</html>
