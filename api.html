@@ -151,6 +151,29 @@
       </div>
 
       <div class="endpoint">
+        <h3>GET /health</h3>
+        <p>
+          Returns the health status of the API including model load status and
+          simulation mode.
+        </p>
+        <p class="response">
+          Response: JSON, e.g., {"status": "healthy", "simulation_mode": false,
+          "model_loaded": true, "model_name": "yolo11n"}
+        </p>
+      </div>
+
+      <div class="endpoint">
+        <h3>POST /detect</h3>
+        <p>Detects objects in an uploaded image file and returns detections.</p>
+        <p>
+          <strong>Request:</strong> multipart/form-data with "image" file field
+        </p>
+        <p class="response">
+          Response: JSON array, e.g., [{"class_name": "AC", "confidence": 0.95}]
+        </p>
+      </div>
+
+      <div class="endpoint">
         <h3>POST /start_capture</h3>
         <p>Starts the frame capture and detection process.</p>
         <p class="response">Response: JSON status message</p>
@@ -175,8 +198,14 @@
 
       <h2>Usage Examples</h2>
       <pre>
-# Get detections
+# Check API health
+curl http://localhost:7926/health
+
+# Get detections from camera stream
 curl http://localhost:7926/detections
+
+# Detect objects in uploaded image
+curl -X POST -F "image=@image.jpg" http://localhost:7926/detect
 
 # Get annotated frame
 curl -o frame.jpg http://localhost:7926/frame
