@@ -1,4 +1,5 @@
-from config import CAMERA_CONFIG, create_fake_image
+from app.config import CAMERA_CONFIG, create_fake_image
+
 
 class Camera:
     def __init__(self, simulation_mode=False):

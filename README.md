@@ -14,10 +14,32 @@ This repository contains a Flask-based web API for real-time object detection us
 
 ## Contents
 
-- `app.py`: Main Flask application implementing the API, detection loops, and fake image generation.
-- `config.py`: Configuration file containing model paths, class names, colors, and utility functions.
-- `camera.py`: Camera abstraction for device-agnostic frame capture (supports Raspberry Pi and fallback to fake mode).
-- `requirements.txt`: Python dependencies for the project.
+- `wsgi.py`: Main application entry point.
+- `app/`: Main Flask application package
+  - `__init__.py`: Flask app factory and service initialization
+  - `config.py`: Configuration file containing model paths, class names, colors, and utility functions
+  - `blueprints/`: Flask blueprints for API endpoints
+    - `main.py`: Main routes (index, info, health)
+    - `detection.py`: Detection endpoints (frame, detections, model switching)
+    - `capture.py`: Capture control endpoints (start/stop)
+    - `logs.py`: Logging endpoints
+  - `services/`: Business logic services
+    - `capture_service.py`: Frame capture and caching
+    - `detection_service.py`: YOLO model management and detection
+    - `logger_service.py`: Logging service
+  - `utils/`: Utility modules
+    - `camera.py`: Camera abstraction for device-agnostic frame capture (supports Raspberry Pi and fallback to fake mode)
+  - `templates/`: HTML templates
+    - `api.html`: API documentation page
+    - `logs.html`: Logs viewer page
+- `models/`: YOLO model files
+  - `best.pt`: YOLO model weights
+- `tests/`: Unit and integration tests
+  - `test_api.py`: API endpoint tests
+- `wsgi.py`: Application entry point
+- `visualize_detection.py`: Utility script to visualize detection results
+- `test_camera.py`: Simple camera test script
+- `requirements.txt`: Python dependencies for the project
 
 ## Installation
 
@@ -43,18 +65,18 @@ pip install -r requirements.txt
 
 ## Configuration
 
-- By default, `SIMULATION_MODE` is set to `False` in `app.py` for live camera mode.
-- To use simulation mode for development without a real camera, set `SIMULATION_MODE` to `True`.
+- By default, `SIMULATION_MODE` is set to `False` in `app/config.py` for live camera mode.
+- To use simulation mode for development without a real camera, set `SIMULATION_MODE` to `True` in `app/config.py`.
 - If `picamera2` is not available (e.g., on non-Raspberry Pi devices), the camera will automatically fall back to simulation mode.
-- The YOLO model paths are defined in the `YOLO_MODEL_PATHS` dictionary in `config.py`. Add or modify models as needed.
-- Custom class names for detections are defined in `CUSTOM_CLASS_NAMES` in `config.py`.
+- The YOLO model paths are defined in the `YOLO_MODEL_PATHS` dictionary in `app/config.py`. Add or modify models as needed.
+- Custom class names for detections are defined in `CUSTOM_CLASS_NAMES` in `app/config.py`.
 
 ## Usage
 
 Run the Flask app:
 
-```
-sudo -E venv/bin/python app.py
+```bash
+sudo -E venv/bin/python wsgi.py
 ```
 
 The server will start on `http://0.0.0.0:7926`.

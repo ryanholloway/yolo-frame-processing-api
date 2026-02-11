@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>YOLO Detection Viewer</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #333;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        color: #2c3e50;
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .upload-section {
+        margin-bottom: 30px;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+      }
+      .upload-section label {
+        display: block;
+        margin-bottom: 10px;
+        font-weight: bold;
+        color: #2c3e50;
+      }
+      input[type="file"] {
+        display: block;
+        margin-bottom: 15px;
+        padding: 10px;
+        border: 2px solid #3498db;
+        border-radius: 5px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .checkbox-group {
+        margin-bottom: 15px;
+      }
+      .checkbox-group input {
+        margin-right: 8px;
+      }
+      button {
+        background: #3498db;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        font-weight: bold;
+      }
+      button:hover {
+        background: #2980b9;
+      }
+      button:disabled {
+        background: #95a5a6;
+        cursor: not-allowed;
+      }
+      .results {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-top: 30px;
+      }
+      .result-section {
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 8px;
+      }
+      .result-section h2 {
+        margin-top: 0;
+        color: #2c3e50;
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 10px;
+      }
+      .detections-list {
+        list-style: none;
+        padding: 0;
+      }
+      .detection-item {
+        padding: 10px;
+        margin: 5px 0;
+        background: white;
+        border-left: 4px solid #27ae60;
+        border-radius: 4px;
+      }
+      .detection-item .class-name {
+        font-weight: bold;
+        color: #27ae60;
+      }
+      .detection-item .confidence {
+        color: #7f8c8d;
+        float: right;
+      }
+      .image-preview {
+        width: 100%;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      .error {
+        background: #e74c3c;
+        color: white;
+        padding: 15px;
+        border-radius: 5px;
+        margin: 20px 0;
+      }
+      .loading {
+        text-align: center;
+        padding: 20px;
+        color: #3498db;
+        font-size: 18px;
+      }
+      @media (max-width: 768px) {
+        .results {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🎯 YOLO Detection Viewer</h1>
+
+      <div class="upload-section">
+        <label for="imageFile">Choose an image to detect:</label>
+        <input type="file" id="imageFile" accept="image/*" />
+
+        <div class="checkbox-group">
+          <label>
+            <input type="checkbox" id="annotateCheckbox" checked />
+            Show annotated image with bounding boxes
+          </label>
+        </div>
+
+        <button onclick="detectObjects()" id="detectButton">
+          Detect Objects
+        </button>
+      </div>
+
+      <div id="loading" class="loading" style="display: none">
+        Processing image...
+      </div>
+
+      <div id="error" class="error" style="display: none"></div>
+
+      <div id="results" class="results" style="display: none">
+        <div class="result-section">
+          <h2>Detected Objects</h2>
+          <ul id="detectionsList" class="detections-list"></ul>
+        </div>
+
+        <div class="result-section" id="imageSection" style="display: none">
+          <h2>Annotated Image</h2>
+          <img
+            id="annotatedImage"
+            class="image-preview"
+            alt="Annotated detection result"
+          />
+        </div>
+      </div>
+    </div>
+
+    <script>
+      async function detectObjects() {
+        const fileInput = document.getElementById("imageFile");
+        const annotateCheckbox = document.getElementById("annotateCheckbox");
+        const detectButton = document.getElementById("detectButton");
+        const loading = document.getElementById("loading");
+        const error = document.getElementById("error");
+        const results = document.getElementById("results");
+        const imageSection = document.getElementById("imageSection");
+
+        // Validate file selection
+        if (!fileInput.files || !fileInput.files[0]) {
+          showError("Please select an image file first.");
+          return;
+        }
+
+        // Prepare form data
+        const formData = new FormData();
+        formData.append("image", fileInput.files[0]);
+
+        // Build URL with annotate parameter
+        const annotate = annotateCheckbox.checked;
+        const url = `/detect?annotate=${annotate}`;
+
+        // UI state
+        detectButton.disabled = true;
+        loading.style.display = "block";
+        error.style.display = "none";
+        results.style.display = "none";
+
+        try {
+          const response = await fetch(url, {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const data = await response.json();
+
+          // Check for error in response
+          if (data.error) {
+            throw new Error(data.error);
+          }
+
+          // Display results
+          displayDetections(data);
+
+          if (annotate && data.annotated_image) {
+            displayAnnotatedImage(data.annotated_image);
+            imageSection.style.display = "block";
+          } else {
+            imageSection.style.display = "none";
+          }
+
+          results.style.display = "grid";
+        } catch (err) {
+          showError(`Error: ${err.message}`);
+        } finally {
+          detectButton.disabled = false;
+          loading.style.display = "none";
+        }
+      }
+
+      function displayDetections(data) {
+        const detectionsList = document.getElementById("detectionsList");
+        detectionsList.innerHTML = "";
+
+        // Handle both array and object with detections array
+        const detections = Array.isArray(data) ? data : data.detections;
+
+        if (!detections || detections.length === 0) {
+          detectionsList.innerHTML =
+            '<li class="detection-item">No objects detected</li>';
+          return;
+        }
+
+        detections.forEach((detection) => {
+          const li = document.createElement("li");
+          li.className = "detection-item";
+          li.innerHTML = `
+                    <span class="class-name">${detection.class_name}</span>
+                    <span class="confidence">${(detection.confidence * 100).toFixed(1)}%</span>
+                `;
+          detectionsList.appendChild(li);
+        });
+      }
+
+      function displayAnnotatedImage(base64Image) {
+        const img = document.getElementById("annotatedImage");
+        img.src = `data:image/jpeg;base64,${base64Image}`;
+      }
+
+      function showError(message) {
+        const error = document.getElementById("error");
+        error.textContent = message;
+        error.style.display = "block";
+      }
+
+      // Allow Enter key to trigger detection
+      document
+        .getElementById("imageFile")
+        .addEventListener("change", function () {
+          document.getElementById("detectButton").focus();
+        });
+    </script>
+  </body>
+</html>
