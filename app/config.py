@@ -3,16 +3,20 @@ import numpy as np
 
 
 class Config:
-    SIMULATION_MODE = False
-    DEFAULT_MODEL = "yolo11n"
+    SIMULATION_MODE = False  # Using simulation mode locally
+    DEFAULT_MODEL = "yolo11n-pt"  # Default model to use for detection
+    DETECTION_SERVICE = "yolo"  # Use "yolo" to fall back to CPU
     HOST = '0.0.0.0'
     PORT = 7926
     DEBUG = True
 
 
 YOLO_MODEL_PATHS = {
-    "yolo11n": "models/best.pt"
+    "yolo11n-pt": "models/best.pt",
+    "yolo11s-hef": "models/yolov11s.hef",
 }
+
+HAILO_MODEL_PATH = "models/yolov11s.hef"
 
 CUSTOM_CLASS_NAMES = [
     '10C', '10D', '10H', '10S', '2C', '2D', '2H', '2S', '3C', '3D', '3H', '3S',

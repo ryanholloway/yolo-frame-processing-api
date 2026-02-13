@@ -125,3 +125,40 @@ def change_model():
         "current_model": detection_service.get_current_model(),
         "available_models": detection_service.get_available_models()
     })
+
+
+@bp.route('/detection-service', methods=['GET', 'POST'])
+def switch_detection_service():
+    """Switch between Hailo and YOLO detection services at runtime"""
+    from app import set_detection_service, get_detection_service
+    
+    if request.method == 'GET':
+        # Get current service info
+        detection_service = get_detection_service()
+        return jsonify({
+            "current_service": detection_service.model_name if hasattr(detection_service, 'model_name') else "unknown",
+            "available_services": ["hailo", "yolo"],
+            "yolo_models": ["yolo11n"],
+            "hailo_model": "yolov8m.hef"
+        })
+    
+    # POST - switch service
+    try:
+        data = request.json
+        service_type = data.get('service')
+        
+        if not service_type:
+            return jsonify({"error": "Missing 'service' parameter. Use 'hailo' or 'yolo'"}), 400
+        
+        result = set_detection_service(
+            service_type,
+            model=data.get('model', 'yolo11n'),
+            simulation_mode=data.get('simulation_mode', False)
+        )
+        return jsonify(result)
+    
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": f"Failed to switch service: {str(e)}"}), 500
+

@@ -13,7 +13,7 @@ class Camera:
                 self.camera.configure(config)
                 self.camera.start()
                 time.sleep(2)
-            except (ImportError, RuntimeError) as e:
+            except (ImportError, RuntimeError, IndexError, AttributeError, Exception) as e:
                 print(f"Camera initialization failed: {e}. Falling back to simulation mode")
                 self.simulation_mode = True
         if self.simulation_mode:

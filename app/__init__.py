@@ -1,8 +1,9 @@
 import warnings
 from flask import Flask
-from app.config import Config
+from app.config import Config, HAILO_MODEL_PATH
 from app.services.capture_service import CaptureService
 from app.services.detection_service import DetectionService
+from app.services.hailo_detection_service import HailoDetectionService
 from app.services.logger_service import Logger
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -19,10 +20,18 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
     
     logger = Logger()
-    detection_service = DetectionService(
-        simulation_mode=app.config['SIMULATION_MODE'],
-        model_name=app.config['DEFAULT_MODEL']
-    )
+    
+    # Initialize detection service based on config
+    if app.config['DETECTION_SERVICE'].lower() == 'hailo':
+        detection_service = HailoDetectionService(
+            simulation_mode=app.config['SIMULATION_MODE'],
+            model_path=HAILO_MODEL_PATH
+        )
+    else:
+        detection_service = DetectionService(
+            simulation_mode=app.config['SIMULATION_MODE'],
+            model_name=app.config['DEFAULT_MODEL']
+        )
     capture_service = CaptureService(
         simulation_mode=app.config['SIMULATION_MODE'],
         detection_service=detection_service,
@@ -52,3 +61,31 @@ def get_detection_service():
 
 def get_logger():
     return logger
+
+
+def set_detection_service(service_type, **kwargs):
+    """Switch detection service at runtime"""
+    global detection_service
+    
+    if service_type.lower() == 'hailo':
+        from app.config import HAILO_MODEL_PATH
+        model_path = kwargs.get('model_path', HAILO_MODEL_PATH)
+        simulation_mode = kwargs.get('simulation_mode', False)
+        detection_service = HailoDetectionService(
+            simulation_mode=simulation_mode,
+            model_path=model_path
+        )
+        return {"status": f"Switched to Hailo ({model_path})", "service": "hailo"}
+    elif service_type.lower() == 'yolo':
+        from app.config import YOLO_MODEL_PATHS
+        model_name = kwargs.get('model', 'yolo11n')
+        simulation_mode = kwargs.get('simulation_mode', False)
+        if model_name not in YOLO_MODEL_PATHS:
+            raise ValueError(f"Model '{model_name}' not found. Available: {list(YOLO_MODEL_PATHS.keys())}")
+        detection_service = DetectionService(
+            simulation_mode=simulation_mode,
+            model_name=model_name
+        )
+        return {"status": f"Switched to YOLO ({model_name})", "service": "yolo", "model": model_name}
+    else:
+        raise ValueError(f"Unknown service type: {service_type}. Use 'hailo' or 'yolo'")
