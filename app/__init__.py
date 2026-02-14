@@ -3,7 +3,6 @@ from flask import Flask
 from app.config import Config, HAILO_MODEL_PATH
 from app.services.capture_service import CaptureService
 from app.services.detection_service import DetectionService
-from app.services.hailo_detection_service import HailoDetectionService
 from app.services.logger_service import Logger
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -22,16 +21,11 @@ def create_app(config_class=Config):
     logger = Logger()
     
     # Initialize detection service based on config
-    if app.config['DETECTION_SERVICE'].lower() == 'hailo':
-        detection_service = HailoDetectionService(
-            simulation_mode=app.config['SIMULATION_MODE'],
-            model_path=HAILO_MODEL_PATH
-        )
-    else:
-        detection_service = DetectionService(
+    detection_service = DetectionService(
             simulation_mode=app.config['SIMULATION_MODE'],
             model_name=app.config['DEFAULT_MODEL']
         )
+    
     capture_service = CaptureService(
         simulation_mode=app.config['SIMULATION_MODE'],
         detection_service=detection_service,
