@@ -60,17 +60,7 @@ def get_logger():
 def set_detection_service(service_type, **kwargs):
     """Switch detection service at runtime"""
     global detection_service
-    
-    if service_type.lower() == 'hailo':
-        from app.config import HAILO_MODEL_PATH
-        model_path = kwargs.get('model_path', HAILO_MODEL_PATH)
-        simulation_mode = kwargs.get('simulation_mode', False)
-        detection_service = HailoDetectionService(
-            simulation_mode=simulation_mode,
-            model_path=model_path
-        )
-        return {"status": f"Switched to Hailo ({model_path})", "service": "hailo"}
-    elif service_type.lower() == 'yolo':
+    if service_type.lower() == 'yolo':
         from app.config import YOLO_MODEL_PATHS
         model_name = kwargs.get('model', 'yolo11n')
         simulation_mode = kwargs.get('simulation_mode', False)
@@ -82,4 +72,4 @@ def set_detection_service(service_type, **kwargs):
         )
         return {"status": f"Switched to YOLO ({model_name})", "service": "yolo", "model": model_name}
     else:
-        raise ValueError(f"Unknown service type: {service_type}. Use 'hailo' or 'yolo'")
+        raise ValueError(f"Unknown service type: {service_type}. Use 'yolo'")
